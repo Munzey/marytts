@@ -33,7 +33,6 @@ class CmuDictConverter {
                 new File(lexicon).eachLine { line ->
                     if (line && !line.startsWith(';')) {
                         def (lemma, pos, arpaPhones) = line.trim().replaceAll(/[()"]/, '').split(/\s/, 3)
-                        // TODO: handle stress and syllabification!
                         def sampaPhones = arpaPhones.split().collect {
                             def (arpa, stress) = it.replaceAll(/(.+?)([0-2]?)$/, '$1 $2').tokenize()
                             stress = stress ?: ''
