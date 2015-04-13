@@ -10,14 +10,14 @@ sourceSets {
 }
 
 configurations {
-    lexicon
+    lexiconCMUdict
 }
 
 repositories {
     mavenLocal()
     jcenter()
     ivy {
-        url 'http://svn.code.sf.net/p/cmusphinx/code/trunk/'
+        url 'http://svn.code.sf.net/p/cmusphinx/code/trunk'
         layout 'pattern', {
             artifact '[module]/[artifact]-[revision]'
         }
@@ -25,7 +25,7 @@ repositories {
 }
 
 dependencies {
-    lexicon name: 'cmudict', version: '0.7b'
+    lexiconCMUdict name: 'cmudict', version: '0.7b', ext: 'txt'
     lexiconCompile localGroovy()
     lexiconCompile group: 'de.dfki.mary', name: 'marytts-common', version: version
     lexiconCompile group: 'de.dfki.mary', name: 'marytts-transcription', version: version
@@ -45,59 +45,40 @@ processLexiconResources {
     from 'lib/modules/en/us/lexicon', {
         include 'allophones.en_US.xml'
     }
-    from configurations.lexicon
+    from configurations.lexiconCMUdict
 }
 
-task convertLexicon(type: JavaExec) {
-    description 'Converts lexicon file to plain text, with a SAMPA phoneset instead of ARPAbet'
-    dependsOn lexiconClasses
-    def destFile = file("$sourceSets.lexicon.output.resourcesDir/en.txt")
-    //with info logging level, after trainLTS has been run this task shows it is not up-to-date as en.lts file has changed
-    inputs.files file("$sourceSets.lexicon.output.resourcesDir/allophones.en_US.xml"), file("$sourceSets.lexicon.output.resourcesDir/sampa2mrpa_en.map"), configurations.lexicon.singleFile
+task convertCMUdict(type: JavaExec) {
+    description 'Converts CMUdict US lexicon file to plain text, with a SAMPA phoneset instead of ARPAbet'
+    dependsOn processLexiconResources
+    def (allophoneSetFile, mappingFile, destFile, lexiconFile) = ['allophones.en_US.xml', 'sampa2mrpa_en.map', 'en_US.txt', 'cmudict-0.7b.txt'].collect {
+        file("$sourceSets.lexicon.output.resourcesDir/$it")
+    }
+    inputs.files allophoneSetFile, mappingFile, lexiconFile
     outputs.files destFile
-    def allophoneSetFile = file("$sourceSets.lexicon.output.resourcesDir/allophones.en_US.xml")
-    def mappingFile = file("$sourceSets.lexicon.output.resourcesDir/sampa2mrpa_en.map")
-    def lexiconFile = configurations.lexicon.singleFile
-    args = [allophoneSetFile, mappingFile, destFile, lexiconFile].flatten()
+    args inputs.files + outputs.files
     classpath sourceSets.lexicon.runtimeClasspath
     main 'CmuDictConverter'
 }
 
-convertLexicon.dependsOn processLexiconResources
-
-task trainLTS(type: JavaExec) {
+task trainCMUdict(type: JavaExec) {
     description 'Trains LTS rules from converted CMUdict'
-    inputs.files file("$sourceSets.lexicon.output.resourcesDir/allophones.en_US.xml"), file("$sourceSets.lexicon.output.resourcesDir/en.txt")
-    outputs.files file("$sourceSets.lexicon.output.resourcesDir/en.lextext"), file("$sourceSets.lexicon.output.resourcesDir/en.lts"), file("$sourceSets.lexicon.output.resourcesDir/en_lexicon.dict"), file("$sourceSets.lexicon.output.resourcesDir/en_lexicon.fst")
-    logger.info("the output files:" + outputs.files.getAsPath())
-    doLast {
-        copy {
-            from sourceSets.lexicon.output.resourcesDir
-            include 'en.lextxt',
-                    'en.lts',
-                    'en_lexicon.dict',
-                    'en_lexicon.fst'
-            into "$sourceSets.main.output.resourcesDir/marytts/language/en_US/lexicon"
-        }
-    }
+    inputs.files "$sourceSets.lexicon.output.resourcesDir/allophones.en_US.xml", convertCMUdict
+    outputs.files "$sourceSets.lexicon.output.resourcesDir/en_US.lts", "$sourceSets.lexicon.output.resourcesDir/en_US_lexicon.fst"
     args inputs.files
     classpath sourceSets.lexicon.runtimeClasspath
     main 'marytts.tools.transcription.LTSLexiconPOSBuilder'
 }
 
 processResources {
-    from trainLTS
+    from trainCMUdict, {
+        rename { "marytts/language/en_US/lexicon/$it" }
+    }
 }
 
-trainLTS.dependsOn convertLexicon
-
 task lexiconTest(type: Test) {
-    dependsOn trainLTS
+    dependsOn convertCMUdict
     useTestNG()
     testClassesDir = sourceSets.lexiconTest.output.classesDir
     classpath = sourceSets.lexiconTest.runtimeClasspath + sourceSets.lexicon.runtimeClasspath
-    systemProperties = [
-            'en_US.lexicon'      : "$sourceSets.main.output.resourcesDir/marytts/language/en_US/lexicon/en_lexicon.fst",
-            'en_US.lettertosound': "$sourceSets.main.output.resourcesDir/marytts/language/en_US/lexicon/en.lts"
-    ]
 }

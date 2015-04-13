@@ -56,7 +56,7 @@ class CmuDictConverter {
     }
 
     static void main(String[] args) {
-        def (allophoneSetFile, mappingFile, destFile, lexiconFile) = args
+        def (allophoneSetFile, mappingFile, lexiconFile, destFile) = args
         def converter = new CmuDictConverter(allophoneSetFile, mappingFile)
         converter.convert(destFile, lexiconFile)
     }
