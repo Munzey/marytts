@@ -5,6 +5,10 @@ target/
 tmp/
 log/
 test-output/
+.gradle/
+.idea/
+*.iml
+*/build
 
 # OSX
 .DS_Store
