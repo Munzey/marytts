@@ -27,15 +27,9 @@ processLexiconResources {
 
 task trainDeDict(type: JavaExec) {
     description 'Trains LTS rules from de.txt'
-    inputs.files processLexiconResources
+    inputs.files "$sourceSets.lexicon.output.resourcesDir/allophones.de.xml", "$sourceSets.lexicon.output.resourcesDir/de.txt"
     outputs.files "$sourceSets.lexicon.output.resourcesDir/de.lts", "$sourceSets.lexicon.output.resourcesDir/de_lexicon.fst"
     args inputs.files
     classpath sourceSets.lexicon.runtimeClasspath
     main 'marytts.tools.transcription.LTSLexiconPOSBuilder'
-}
-
-processResources {
-    from trainDeDict, {
-        rename { "marytts/language/de/lexicon/$it" }
-    }
 }
