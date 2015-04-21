@@ -233,7 +233,9 @@ public class JPhonemiser extends InternalModule {
 		// to the normalised form
 
 		String phones = lts.predictPronunciation(text);
-		result = lts.syllabify(phones);
+		if (phones.length() > 0) {
+			result = lts.syllabify(phones);
+		}
 		if (result != null) {
 			g2pMethod.append("rules");
 			return result;
