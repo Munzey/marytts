@@ -17,9 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # #########################################################################
-α '?al-fa:
-β 'bE-ta:
-γ 'ga-ma:
 AG ?a:-'ge:
 ASEAN '?a-ze:-a:n
 Aa '?a:-'?a:

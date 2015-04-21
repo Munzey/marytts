@@ -1,0 +1,41 @@
+plugins {
+    id 'groovy'
+}
+
+version '5.2-SNAPSHOT'
+
+repositories {
+    mavenLocal()
+    jcenter()
+}
+
+sourceSets {
+    lexicon
+}
+
+dependencies {
+    lexiconCompile group: 'de.dfki.mary', name: 'marytts-common', version: version
+    lexiconCompile group: 'de.dfki.mary', name: 'marytts-transcription', version: version
+}
+
+processLexiconResources {
+    from 'lib/modules/de/lexicon', {
+        include 'allophones.de.xml'
+        include 'de.txt'
+    }
+}
+
+task trainDeDict(type: JavaExec) {
+    description 'Trains LTS rules from de.txt'
+    inputs.files processLexiconResources
+    outputs.files "$sourceSets.lexicon.output.resourcesDir/de.lts", "$sourceSets.lexicon.output.resourcesDir/de_lexicon.fst"
+    args inputs.files
+    classpath sourceSets.lexicon.runtimeClasspath
+    main 'marytts.tools.transcription.LTSLexiconPOSBuilder'
+}
+
+processResources {
+    from trainDeDict, {
+        rename { "marytts/language/de/lexicon/$it" }
+    }
+}
