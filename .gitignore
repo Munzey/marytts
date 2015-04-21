@@ -5,10 +5,14 @@ target/
 tmp/
 log/
 test-output/
+
+# Gradle
+build/
 .gradle/
+
+#IDEA
 .idea/
 *.iml
-*/build
 
 # OSX
 .DS_Store
