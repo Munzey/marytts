@@ -6,8 +6,6 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.ibm.icu.util.ULocale;
-
 import marytts.datatypes.MaryData;
 import marytts.datatypes.MaryDataType;
 import marytts.datatypes.MaryXML;
@@ -21,6 +19,7 @@ import org.w3c.dom.traversal.DocumentTraversal;
 import org.w3c.dom.traversal.NodeFilter;
 import org.w3c.dom.traversal.TreeWalker;
 
+import com.ibm.icu.util.ULocale;
 import com.ibm.icu.text.RuleBasedNumberFormat;
 
 /**
@@ -31,6 +30,12 @@ import com.ibm.icu.text.RuleBasedNumberFormat;
  *         - ordinal 
  *         - year 
  *         - currency 
+ *         Does not handle yet:
+ *         - contractions and abbreviations
+ *         - roman numerals
+ *         - dashes (read each number singly) or (split into two words)
+ *         - decimal points,minus (real numbers)
+ *         - time
  */
 public class Preprocess extends InternalModule {
 
@@ -41,9 +46,11 @@ public class Preprocess extends InternalModule {
 
 	// Regex matching patterns
 	private static final Pattern moneyPattern;
+	private static final Pattern timePattern;
 
 	static {
 		moneyPattern = Pattern.compile("(\\$|£|€)(\\d+)(\\.\\d+)?");
+		timePattern = Pattern.compile("(0?[0-9]|1[0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?");
 	}
 
 	public Preprocess() {
@@ -85,57 +92,25 @@ public class Preprocess extends InternalModule {
 			if (MaryDomUtils.tokenText(t).matches("\\d+(st|nd|rd|th|ST|ND|RD|TH)")) {
 				String matched = MaryDomUtils.tokenText(t).split("st|nd|rd|th|ST|ND|RD|TH")[0];
 				MaryDomUtils.setTokenText(t, expandOrdinal(Double.parseDouble(matched)));
-				// year
+			// year
 			} else if (MaryDomUtils.tokenText(t).matches("\\d{4}") && isYear == true) {
 				MaryDomUtils.setTokenText(t, expandYear(Double.parseDouble(MaryDomUtils.tokenText(t))));
-				// cardinal
+			// cardinal
 			} else if (MaryDomUtils.tokenText(t).matches("\\d+")) {
 				MaryDomUtils.setTokenText(t, expandNumber(Double.parseDouble(MaryDomUtils.tokenText(t))));
-				// currency
-			} else if (MaryDomUtils.tokenText(t).matches(moneyPattern.pattern())) {
-				Matcher currencyMatch = moneyPattern.matcher(MaryDomUtils.tokenText(t));
-				currencyMatch.find();
-				switch (currencyMatch.group(1)) {
-				case "$":
-					if (Double.parseDouble(currencyMatch.group(2)) > 1) {
-						MaryDomUtils.setTokenText(t, expandNumber(Double.parseDouble(currencyMatch.group(2))) + " dollars");
-					} else {
-						MaryDomUtils.setTokenText(t, expandNumber(Double.parseDouble(currencyMatch.group(2))) + " dollar");
-					}
-					if (currencyMatch.group(3) != null) {
-						int dotIndex = origText.indexOf('.');
-						MaryDomUtils.setTokenText(
-								t,
-								MaryDomUtils.tokenText(t) + " "
-										+ expandNumber(Double.parseDouble(origText.substring(dotIndex + 1)))
-										+ " cents");
-					}
-					break;
-				case "£":
-					MaryDomUtils.setTokenText(t, expandNumber(Double.parseDouble(currencyMatch.group(2))) + " pound sterling");
-					if (currencyMatch.group(3) != null) {
-						int dotIndex = origText.indexOf('.');
-						MaryDomUtils.setTokenText(
-								t,
-								MaryDomUtils.tokenText(t) + " "
-										+ expandNumber(Double.parseDouble(origText.substring(dotIndex + 1)))
-										+ " pence");
-					}
-					break;
-				case "€":
-					MaryDomUtils.setTokenText(t, expandNumber(Double.parseDouble(currencyMatch.group(2))) + " euro");
-					if (currencyMatch.group(3) != null) {
-						int dotIndex = origText.indexOf('.');
-						MaryDomUtils.setTokenText(
-								t,
-								MaryDomUtils.tokenText(t) + " "
-										+ expandNumber(Double.parseDouble(origText.substring(dotIndex + 1)))
-										+ " cents");
-					}
-					break;
-				default:
-					break;
+			// time
+			} else if (MaryDomUtils.tokenText(t).matches(timePattern.pattern())) {
+				Matcher timeMatch = timePattern.matcher(MaryDomUtils.tokenText(t));
+				timeMatch.find();
+				if (timeMatch.group(7) != null) {
+					MaryDomUtils.setTokenText(t, expandDuration(MaryDomUtils.tokenText(t)));
 				}
+				else {
+					MaryDomUtils.setTokenText(t, expandTime(MaryDomUtils.tokenText(t)));
+				}
+			// currency
+			} else if (MaryDomUtils.tokenText(t).matches(moneyPattern.pattern())) {
+				MaryDomUtils.setTokenText(t, expandMoney(MaryDomUtils.tokenText(t)));
 			}
 			// if token isn't ignored but there is no handling rule don't add MTU
 			if (!origText.equals(MaryDomUtils.tokenText(t))) {
@@ -157,6 +132,50 @@ public class Preprocess extends InternalModule {
 	protected String expandYear(double number) {
 		this.rbnf.setDefaultRuleSet(yearRule);
 		return this.rbnf.format(number);
+	}
+	
+	protected String expandDuration(String duration) {
+		return null;
+	}
+	
+	protected String expandTime(String time) {
+		return null;
+	}
+	
+	protected String expandMoney(String money) {
+		String origText = money;
+		Matcher currencyMatch = moneyPattern.matcher(money);
+		currencyMatch.find();
+		switch (currencyMatch.group(1)) {
+		case "$":
+			if (Double.parseDouble(currencyMatch.group(2)) > 1) {
+				money = expandNumber(Double.parseDouble(currencyMatch.group(2))) + " dollars";
+			} else {
+				money = expandNumber(Double.parseDouble(currencyMatch.group(2))) + " dollar";
+			}
+			if (currencyMatch.group(3) != null) {
+				int dotIndex = origText.indexOf('.');
+				money = money + " " + expandNumber(Double.parseDouble(origText.substring(dotIndex + 1))) + " cents";
+			}
+			break;
+		case "£":
+			money = expandNumber(Double.parseDouble(currencyMatch.group(2))) + " pound sterling";
+			if (currencyMatch.group(3) != null) {
+				int dotIndex = origText.indexOf('.');
+				money = money + " " + expandNumber(Double.parseDouble(origText.substring(dotIndex + 1))) + " pence";
+			}
+			break;
+		case "€":
+			money = expandNumber(Double.parseDouble(currencyMatch.group(2))) + " euro";
+			if (currencyMatch.group(3) != null) {
+				int dotIndex = origText.indexOf('.');
+				money = money + " " + expandNumber(Double.parseDouble(origText.substring(dotIndex + 1))) + " cents";
+			}
+			break;
+		default:
+			break;
+		}
+		return money;
 	}
 
 	/**
