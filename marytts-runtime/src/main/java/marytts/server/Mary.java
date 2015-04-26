@@ -428,7 +428,8 @@ public class Mary {
 			}
 			audioFileFormat = new AudioFileFormat(audioType, audioFormat, AudioSystem.NOT_SPECIFIED);
 		}
-
+		//For each request, the original input type should be tracked so that the processing modules can access it
+		System.setProperty("request.input", inputType.toString());
 		Request request = new Request(inputType, outputType, locale, voice, effects, style, 1, audioFileFormat, false,
 				outputTypeParams);
 		request.setInputData(input);
