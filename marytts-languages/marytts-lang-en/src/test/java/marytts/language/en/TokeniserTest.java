@@ -30,22 +30,19 @@ public class TokeniserTest {
 	@BeforeSuite
 	public void setUp() throws MaryConfigurationException {
 		mary = new LocalMaryInterface();
-		mary.setInputType("TOKENS");
-		mary.setOutputType("PHONEMES");
+		mary.setInputType("TEXT");
+		mary.setOutputType("TOKENS");
 	}
 
 	@Test
 	public void testTokenise() throws Exception, ParserConfigurationException, SAXException, IOException {
 		Document tokenisedDoc;
 		Document expectedDoc;
-		String lemma = "cat's";
-		String tokens = "<maryxml xmlns=\"http://mary.dfki.de/2002/MaryXML\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"0.5\" xml:lang=\"en-US\"><p><s><t>"
+		String lemma = "no-one";
+		Document actualDoc = mary.generateXML(lemma);
+		String tokens = "<maryxml xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"0.5\" xml:lang=\"en-US\" xmlns=\"http://mary.dfki.de/2002/MaryXML\"><p><s><t>"
 				+ lemma + "</t></s></p></maryxml>";
-		tokenisedDoc = DomUtils.parseDocument(tokens);
-		Document actualDoc = mary.generateXML(tokenisedDoc);
-		String phonemes = "<maryxml xmlns=\"http://mary.dfki.de/2002/MaryXML\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"0.5\" xml:lang=\"en-US\"><p><s><t g2p_method=\"rules\" ph=\"' k { t s\" pos=\"NN\">"
-				+ lemma + "</t></s></p></maryxml>";
-		expectedDoc = DomUtils.parseDocument(phonemes);
+		expectedDoc = DomUtils.parseDocument(tokens);
 		printDocument(expectedDoc, System.out);
 		printDocument(actualDoc, System.out);
 		Diff diff = XMLUnit.compareXML(expectedDoc, actualDoc);
