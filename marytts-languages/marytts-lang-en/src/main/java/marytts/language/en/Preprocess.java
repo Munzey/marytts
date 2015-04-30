@@ -26,19 +26,27 @@ import com.ibm.icu.text.RuleBasedNumberFormat;
  * @author Tristan Hamilton
  * 
  *         Can process following formats: 
- *         - cardinal 
+ *         - cardinal (handled by real number)
  *         - ordinal 
  *         - year 
  *         - currency 
- *         Does not handle yet:
- *         - contractions and abbreviations
- *         - roman numerals
+ *         - numberandword together
  *         - dashes (read each number singly) or (split into two words)
- *         - decimal points,minus (real numbers)
- *         - time
+ *         - decimal points,minus (real numbers) also handle %
+ *         
+ *         Does not handle yet:
+ *         - abbreviations (have a resource of known expansions?)
+ *         - contractions -> first check lexicon, if not then
+ *         				  -> don't expand but split before punctuation into two tokens
+ *         				  -> for 's if word ends in c,f,k,p,t then add ph = s otherwise ph = z
+ *         - acronyms (should they be expanded? have a resource of known expansions?)
+ *         - roman numerals
+ *         - time & durations
+ *         - single "A" character
  */
 public class Preprocess extends InternalModule {
 
+	// icu4j stuff
 	private RuleBasedNumberFormat rbnf;
 	protected final String cardinalRule;
 	protected final String ordinalRule;
@@ -47,10 +55,18 @@ public class Preprocess extends InternalModule {
 	// Regex matching patterns
 	private static final Pattern moneyPattern;
 	private static final Pattern timePattern;
+	private static final Pattern durationPattern;
+	private static final Pattern abbrevPattern;
+	private static final Pattern acronymPattern;
+	private static final Pattern realNumPattern;
 
 	static {
 		moneyPattern = Pattern.compile("(\\$|£|€)(\\d+)(\\.\\d+)?");
-		timePattern = Pattern.compile("(0?[0-9]|1[0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?");
+		timePattern = Pattern.compile("((0?[0-9])|(1[0-1])|(1[2-9])|(2[0-3])):([0-5][0-9])");
+		durationPattern = Pattern.compile("(0?[0-9]|\\d+):([0-5][0-9])(:[0-5][0-9])?(:[0-5][0-9])?");
+		abbrevPattern = Pattern.compile("\\w+\\.(\\w+)?");
+		acronymPattern = Pattern.compile("(\\w\\.)+");
+		realNumPattern = Pattern.compile("(-)?(\\d+)?(\\.(\\d+)(%)?)?");
 	}
 
 	public Preprocess() {
@@ -63,13 +79,13 @@ public class Preprocess extends InternalModule {
 
 	public MaryData process(MaryData d) throws Exception {
 		Document doc = d.getDocument();
-		checkForNumbers(doc);
+		expand(doc);
 		MaryData result = new MaryData(getOutputType(), d.getLocale());
 		result.setDocument(doc);
 		return result;
 	}
 
-	protected void checkForNumbers(Document doc) {
+	protected void expand(Document doc) {
 		boolean isYear;
 		TreeWalker tw = ((DocumentTraversal) doc).createTreeWalker(doc, NodeFilter.SHOW_ELEMENT,
 				new NameNodeFilter(MaryXML.TOKEN), false);
@@ -92,30 +108,46 @@ public class Preprocess extends InternalModule {
 			if (MaryDomUtils.tokenText(t).matches("\\d+(st|nd|rd|th|ST|ND|RD|TH)")) {
 				String matched = MaryDomUtils.tokenText(t).split("st|nd|rd|th|ST|ND|RD|TH")[0];
 				MaryDomUtils.setTokenText(t, expandOrdinal(Double.parseDouble(matched)));
+			// wordAndNumber
+			} else if (MaryDomUtils.tokenText(t).contains("\\w+") && MaryDomUtils.tokenText(t).contains("\\d+")) {
+				MaryDomUtils.setTokenText(t, expandWordNumber(MaryDomUtils.tokenText(t)));
 			// year
 			} else if (MaryDomUtils.tokenText(t).matches("\\d{4}") && isYear == true) {
 				MaryDomUtils.setTokenText(t, expandYear(Double.parseDouble(MaryDomUtils.tokenText(t))));
-			// cardinal
-			} else if (MaryDomUtils.tokenText(t).matches("\\d+")) {
-				MaryDomUtils.setTokenText(t, expandNumber(Double.parseDouble(MaryDomUtils.tokenText(t))));
+			// real number
+			} else if (MaryDomUtils.tokenText(t).matches(realNumPattern.pattern())) {
+				MaryDomUtils.setTokenText(t, expandRealNumber(MaryDomUtils.tokenText(t)));
 			// time
 			} else if (MaryDomUtils.tokenText(t).matches(timePattern.pattern())) {
-				Matcher timeMatch = timePattern.matcher(MaryDomUtils.tokenText(t));
-				timeMatch.find();
-				if (timeMatch.group(7) != null) {
-					MaryDomUtils.setTokenText(t, expandDuration(MaryDomUtils.tokenText(t)));
-				}
-				else {
-					MaryDomUtils.setTokenText(t, expandTime(MaryDomUtils.tokenText(t)));
-				}
+				MaryDomUtils.setTokenText(t, expandTime(MaryDomUtils.tokenText(t)));
+			// duration
+			} else if (MaryDomUtils.tokenText(t).matches(durationPattern.pattern())) {
+				MaryDomUtils.setTokenText(t, expandDuration(MaryDomUtils.tokenText(t)));
 			// currency
 			} else if (MaryDomUtils.tokenText(t).matches(moneyPattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandMoney(MaryDomUtils.tokenText(t)));
+			// dashes 
+			} else if (MaryDomUtils.tokenText(t).contains("-")) {
+				String[] tokens = MaryDomUtils.tokenText(t).split("-");
+				int i = 0;
+				for(String tok:tokens){
+					if (tok.matches("\\d+")) {
+						String newTok = "";
+						for(char c:tok.toCharArray()){
+							newTok += expandNumber(Double.parseDouble(String.valueOf(c))) + " ";
+						}
+						tokens[i] = newTok;
+					}
+					i++;
+				}
+				MaryDomUtils.setTokenText(t, Arrays.toString(tokens).replaceAll("[,\\]\\[]", ""));
 			}
 			// if token isn't ignored but there is no handling rule don't add MTU
 			if (!origText.equals(MaryDomUtils.tokenText(t))) {
 				MaryDomUtils.encloseWithMTU(t, origText, null);
 			}
+			//finally, split new expanded token seperated by spaces into seperate tokens
+			
 		}
 	}
 
@@ -139,7 +171,43 @@ public class Preprocess extends InternalModule {
 	}
 	
 	protected String expandTime(String time) {
+		Matcher timeMatch = timePattern.matcher(time);
+		timeMatch.find();
 		return null;
+	}
+	
+	protected String expandRealNumber(String number) {
+		Matcher realNumMatch = realNumPattern.matcher(number);
+		realNumMatch.find();
+		String newTok = "";
+		if (realNumMatch.group(1) != null){
+			newTok += "minus ";
+		}
+		if (realNumMatch.group(2) != null){
+			newTok += expandNumber(Double.parseDouble(realNumMatch.group(2))) + " ";
+		}
+		if (realNumMatch.group(3) != null){
+			newTok += "point ";
+			for(char c:realNumMatch.group(4).toCharArray()){
+				newTok += expandNumber(Double.parseDouble(String.valueOf(c))) + " ";
+			}
+			if (realNumMatch.group(5) != null){
+				newTok += "per cent";
+			}
+		}
+		return newTok.trim();
+	}
+	
+	protected String expandWordNumber(String wordnumseq){
+		String[] groups = wordnumseq.split("(?<=\\D)(?=\\d)|(?<=\\d)(?=\\D)");
+		int i = 0;
+		for(String g:groups){
+			if (g.matches("\\d+")) {
+				groups[i] = expandNumber(Double.parseDouble(g));
+			}
+			i++;
+		}
+		return Arrays.toString(groups).replaceAll("[,\\]\\[]", "");
 	}
 	
 	protected String expandMoney(String money) {

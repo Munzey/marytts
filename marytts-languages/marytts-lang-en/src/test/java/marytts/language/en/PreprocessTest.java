@@ -49,7 +49,8 @@ public class PreprocessTest {
 								{ "1st", "first"},
 								{ "2nd", "second" },
 								{ "3rd", "third" },
-								{ "4th", "fourth" } };
+								{ "4th", "fourth" }, 
+								{ "cat-like", "cat like"}};
 		// @formatter:on
 	}
 
@@ -62,6 +63,16 @@ public class PreprocessTest {
 								{ "4", "four" },
 								{ "100", "one hundred" },
 								{ "42", "forty-two"} };
+		// @formatter:on
+	}
+	
+	@DataProvider(name = "RealNumExpandData")
+	private Object[][] numberExpansionDocDataRealNumbers() {
+		// @formatter:off
+		return new Object[][] { { "1.8", "one point eight" }, 
+								{ "-2", "minus two" }, 
+								{ "03.45", "three point four five" }, 
+								{ "42.56%", "forty-two point five six per cent" } };
 		// @formatter:on
 	}
 
@@ -83,6 +94,14 @@ public class PreprocessTest {
 								{ "2015", "twenty fifteen" } };
 		// @formatter:on
 	}
+	
+	@DataProvider(name = "wordNumExpandData")
+	private Object[][] expansionDocDataNumWord() {
+		// @formatter:off
+		return new Object[][] { { "123abc", "one hundred twenty-three abc" },
+								{ "1hello5", "one hello five" } };
+		// @formatter:on
+	}
 
 	@Test(dataProvider = "DocData")
 	public void testSpellout(String tokenised, String expected) throws Exception, ParserConfigurationException, SAXException,
@@ -95,7 +114,7 @@ public class PreprocessTest {
 		String words = "<maryxml xmlns=\"http://mary.dfki.de/2002/MaryXML\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"0.5\" xml:lang=\"en\"><p><s><mtu orig=\""
 				+ tokenised + "\"><t>" + expected + "</t></mtu></s></p></maryxml>";
 		expectedDoc = DomUtils.parseDocument(words);
-		module.checkForNumbers(tokenisedDoc);
+		module.expand(tokenisedDoc);
 		Diff diff = XMLUnit.compareXML(expectedDoc, tokenisedDoc);
 		Assert.assertTrue(diff.identical());
 	}
@@ -104,6 +123,12 @@ public class PreprocessTest {
 	public void testExpandNum(String token, String word) {
 		double x = Double.parseDouble(token);
 		String actual = module.expandNumber(x);
+		Assert.assertEquals(actual, word);
+	}
+	
+	@Test(dataProvider = "RealNumExpandData")
+	public void testExpandRealNum(String token, String word) {
+		String actual = module.expandRealNumber(token);
 		Assert.assertEquals(actual, word);
 	}
 
@@ -118,6 +143,12 @@ public class PreprocessTest {
 	public void testExpandYear(String token, String word) {
 		double x = Double.parseDouble(token);
 		String actual = module.expandYear(x);
+		Assert.assertEquals(actual, word);
+	}
+	
+	@Test(dataProvider = "wordNumExpandData")
+	public void testExpandNumWord(String token, String word) {
+		String actual = module.expandWordNumber(token);
 		Assert.assertEquals(actual, word);
 	}
 }
