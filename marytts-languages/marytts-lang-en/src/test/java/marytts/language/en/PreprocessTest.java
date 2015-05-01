@@ -102,7 +102,17 @@ public class PreprocessTest {
 								{ "1hello5", "one hello five" } };
 		// @formatter:on
 	}
-
+	
+	@DataProvider(name = "timeExpandData")
+	private Object[][] expansionDocDataTime() {
+		// @formatter:off
+		return new Object[][] { { "09:00", "nine a m" },
+								{ "12:15", "twelve fifteen p m" }, 
+								{ "00:05am", "twelve oh five a m" },
+								{ "23:30", "eleven thirty p m" } };
+		// @formatter:on
+	}
+	
 	@Test(dataProvider = "DocData")
 	public void testSpellout(String tokenised, String expected) throws Exception, ParserConfigurationException, SAXException,
 			IOException {
@@ -149,6 +159,12 @@ public class PreprocessTest {
 	@Test(dataProvider = "wordNumExpandData")
 	public void testExpandNumWord(String token, String word) {
 		String actual = module.expandWordNumber(token);
+		Assert.assertEquals(actual, word);
+	}
+	
+	@Test(dataProvider = "timeExpandData")
+	public void testExpandTime(String token, String word) {
+		String actual = module.expandTime(token, false);
 		Assert.assertEquals(actual, word);
 	}
 }

@@ -32,17 +32,21 @@ import com.ibm.icu.text.RuleBasedNumberFormat;
  *         - currency 
  *         - numberandword together
  *         - dashes (read each number singly) or (split into two words)
- *         - decimal points,minus (real numbers) also handle %
+ *         - decimal points,minus (real numbers) also handles %
+ *         - time
  *         
  *         Does not handle yet:
  *         - abbreviations (have a resource of known expansions?)
+ *         - acronyms (should they be expanded? have a resource of known expansions? or just expand into single letters? both?)
+ *         for any word that is ALL capitals or has d.o.t.s ?
  *         - contractions -> first check lexicon, if not then
  *         				  -> don't expand but split before punctuation into two tokens
  *         				  -> for 's if word ends in c,f,k,p,t then add ph = s otherwise ph = z
- *         - acronyms (should they be expanded? have a resource of known expansions?)
- *         - roman numerals
- *         - time & durations
  *         - single "A" character
+ *         
+ *         May include:
+ *         - roman numerals
+ *         - durations
  */
 public class Preprocess extends InternalModule {
 
@@ -62,8 +66,8 @@ public class Preprocess extends InternalModule {
 
 	static {
 		moneyPattern = Pattern.compile("(\\$|£|€)(\\d+)(\\.\\d+)?");
-		timePattern = Pattern.compile("((0?[0-9])|(1[0-1])|(1[2-9])|(2[0-3])):([0-5][0-9])");
-		durationPattern = Pattern.compile("(0?[0-9]|\\d+):([0-5][0-9])(:[0-5][0-9])?(:[0-5][0-9])?");
+		timePattern = Pattern.compile("((0?[0-9])|(1[0-1])|(1[2-9])|(2[0-3])):([0-5][0-9])(a\\.m\\.|AM|PM|am|pm|p\\.m\\.)?");
+		durationPattern = Pattern.compile("(\\d+):([0-5][0-9])(:[0-5][0-9])(:[0-5][0-9])?");
 		abbrevPattern = Pattern.compile("\\w+\\.(\\w+)?");
 		acronymPattern = Pattern.compile("(\\w\\.)+");
 		realNumPattern = Pattern.compile("(-)?(\\d+)?(\\.(\\d+)(%)?)?");
@@ -119,7 +123,12 @@ public class Preprocess extends InternalModule {
 				MaryDomUtils.setTokenText(t, expandRealNumber(MaryDomUtils.tokenText(t)));
 			// time
 			} else if (MaryDomUtils.tokenText(t).matches(timePattern.pattern())) {
-				MaryDomUtils.setTokenText(t, expandTime(MaryDomUtils.tokenText(t)));
+				Element testNode = MaryDomUtils.getNextOfItsKindIn(t, (Element) t.getParentNode());
+				boolean nextTokenIsTime = false;
+				if (testNode != null && MaryDomUtils.tokenText(testNode).matches("a\\.m\\.|AM|PM|am|pm|p\\.m\\.")) {
+					nextTokenIsTime = true;
+				}
+				MaryDomUtils.setTokenText(t, expandTime(MaryDomUtils.tokenText(t), nextTokenIsTime));
 			// duration
 			} else if (MaryDomUtils.tokenText(t).matches(durationPattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandDuration(MaryDomUtils.tokenText(t)));
@@ -170,10 +179,69 @@ public class Preprocess extends InternalModule {
 		return null;
 	}
 	
-	protected String expandTime(String time) {
+	protected String expandTime(String time, boolean isNextTokenTime) {
+		boolean pastNoon = false;
+		String theTime = "";
+		String hour = "";
+		Double pmHour;
 		Matcher timeMatch = timePattern.matcher(time);
 		timeMatch.find();
-		return null;
+		//hour
+		if (timeMatch.group(2) != null || timeMatch.group(3) != null) {
+			hour = (timeMatch.group(2) != null) ? timeMatch.group(2) : timeMatch.group(3);
+			if (hour.equals("00")) {
+				hour = "12";
+			}
+			theTime += expandNumber(Double.parseDouble(hour));
+		}
+		else {
+			pastNoon = true;
+			hour = (timeMatch.group(4) != null) ? timeMatch.group(4) : timeMatch.group(5);
+			pmHour = Double.parseDouble(hour) - 12;
+			if (pmHour == 0) {
+				hour = "12";
+				theTime += expandNumber(Double.parseDouble(hour));
+			}
+			else {
+				theTime += expandNumber(pmHour);
+			}	
+		}
+		//minutes
+		if (timeMatch.group(7) != null && !isNextTokenTime) {
+			if (!timeMatch.group(6).equals("00")) {
+				if (timeMatch.group(6).matches("0\\d")) {
+					theTime += " oh " + expandNumber(Double.parseDouble(timeMatch.group(6)));
+				}
+				else {
+					theTime += " " + expandNumber(Double.parseDouble(timeMatch.group(6)));
+				}
+			}
+			for (char c: timeMatch.group(7).replaceAll("\\.", "").toCharArray()){
+				theTime += " " + c;
+			}
+		}
+		else if (!isNextTokenTime) {
+			if (!timeMatch.group(6).equals("00")) {
+				if (timeMatch.group(6).matches("0\\d")) {
+					theTime += " oh " + expandNumber(Double.parseDouble(timeMatch.group(6)));
+				}
+				else {
+					theTime += " " + expandNumber(Double.parseDouble(timeMatch.group(6)));
+				}
+			}
+			theTime += !pastNoon ? " a m" : " p m";
+		}
+		else {
+			if (!timeMatch.group(6).equals("00")) {
+				if (timeMatch.group(6).matches("0\\d")) {
+					theTime += " oh " + expandNumber(Double.parseDouble(timeMatch.group(6)));
+				}
+				else {
+					theTime += " " + expandNumber(Double.parseDouble(timeMatch.group(6)));
+				}
+			}
+		}
+		return theTime;
 	}
 	
 	protected String expandRealNumber(String number) {
