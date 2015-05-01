@@ -15,6 +15,7 @@ import marytts.util.dom.NameNodeFilter;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.traversal.DocumentTraversal;
 import org.w3c.dom.traversal.NodeFilter;
 import org.w3c.dom.traversal.TreeWalker;
@@ -32,7 +33,7 @@ import com.ibm.icu.text.RuleBasedNumberFormat;
  *         - currency 
  *         - numberandword together
  *         - dashes (read each number singly) or (split into two words)
- *         - decimal points,minus (real numbers) also handles %
+ *         - decimal points,minus (real numbers) also handles %, however Jtokeniser splits % into seperate token
  *         - time
  *         
  *         Does not handle yet:
@@ -112,7 +113,7 @@ public class Preprocess extends InternalModule {
 			if (MaryDomUtils.tokenText(t).matches("\\d+(st|nd|rd|th|ST|ND|RD|TH)")) {
 				String matched = MaryDomUtils.tokenText(t).split("st|nd|rd|th|ST|ND|RD|TH")[0];
 				MaryDomUtils.setTokenText(t, expandOrdinal(Double.parseDouble(matched)));
-			// wordAndNumber
+			// wordAndNumber -  FIXME cant use .contains with regex
 			} else if (MaryDomUtils.tokenText(t).contains("\\w+") && MaryDomUtils.tokenText(t).contains("\\d+")) {
 				MaryDomUtils.setTokenText(t, expandWordNumber(MaryDomUtils.tokenText(t)));
 			// year
@@ -121,9 +122,12 @@ public class Preprocess extends InternalModule {
 			// real number
 			} else if (MaryDomUtils.tokenText(t).matches(realNumPattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandRealNumber(MaryDomUtils.tokenText(t)));
+			// % symbol
+			} else if (MaryDomUtils.tokenText(t).matches("%")){
+				MaryDomUtils.setTokenText(t, "per cent");
 			// time
 			} else if (MaryDomUtils.tokenText(t).matches(timePattern.pattern())) {
-				Element testNode = MaryDomUtils.getNextOfItsKindIn(t, (Element) t.getParentNode());
+				Element testNode = MaryDomUtils.getNextSiblingElement((Element) t);
 				boolean nextTokenIsTime = false;
 				if (testNode != null && MaryDomUtils.tokenText(testNode).matches("a\\.m\\.|AM|PM|am|pm|p\\.m\\.")) {
 					nextTokenIsTime = true;
@@ -154,8 +158,16 @@ public class Preprocess extends InternalModule {
 			// if token isn't ignored but there is no handling rule don't add MTU
 			if (!origText.equals(MaryDomUtils.tokenText(t))) {
 				MaryDomUtils.encloseWithMTU(t, origText, null);
+			// finally, split new expanded token seperated by spaces into seperate tokens
+				String[] newTokens = MaryDomUtils.tokenText(t).split("\\s+");
+				MaryDomUtils.setTokenText(t, newTokens[0]);
+				for (int i = 1; i < newTokens.length; i++) {
+					MaryDomUtils.appendToken(t, newTokens[i]);
+					t = MaryDomUtils.getNextSiblingElement((Element) t);
+				}
+			// let treewalker catch up
+				tw.setCurrentNode((Node) t);
 			}
-			//finally, split new expanded token seperated by spaces into seperate tokens
 			
 		}
 	}

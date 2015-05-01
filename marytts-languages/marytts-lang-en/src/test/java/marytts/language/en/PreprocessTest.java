@@ -50,6 +50,7 @@ public class PreprocessTest {
 								{ "2nd", "second" },
 								{ "3rd", "third" },
 								{ "4th", "fourth" }, 
+								{ "1-800", "one eight zero zero" },
 								{ "cat-like", "cat like"}};
 		// @formatter:on
 	}

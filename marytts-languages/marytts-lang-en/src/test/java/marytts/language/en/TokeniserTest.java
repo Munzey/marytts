@@ -31,14 +31,14 @@ public class TokeniserTest {
 	public void setUp() throws MaryConfigurationException {
 		mary = new LocalMaryInterface();
 		mary.setInputType("TEXT");
-		mary.setOutputType("TOKENS");
+		mary.setOutputType("WORDS");
 	}
 
 	@Test
 	public void testTokenise() throws Exception, ParserConfigurationException, SAXException, IOException {
 		Document tokenisedDoc;
 		Document expectedDoc;
-		String lemma = "no-one";
+		String lemma = "1-800-555 call now for 50% off in the 2nd mattress101 sale.";
 		Document actualDoc = mary.generateXML(lemma);
 		String tokens = "<maryxml xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"0.5\" xml:lang=\"en-US\" xmlns=\"http://mary.dfki.de/2002/MaryXML\"><p><s><t>"
 				+ lemma + "</t></s></p></maryxml>";
