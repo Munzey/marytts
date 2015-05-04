@@ -13,6 +13,8 @@ import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
+import java.text.ParseException;
+
 import javax.xml.parsers.ParserConfigurationException;
 
 /**
@@ -114,6 +116,14 @@ public class PreprocessTest {
 		// @formatter:on
 	}
 	
+	@DataProvider(name = "dateExpandData")
+	private Object[][] expansionDocDataDate() {
+		// @formatter:off
+		return new Object[][] { { "06/29/1993", "June twenty-ninth nineteen ninety-three" },
+								{ "06/22/1992", "June twenty-second nineteen ninety-two" } };
+		// @formatter:on
+	}
+	
 	@Test(dataProvider = "DocData")
 	public void testSpellout(String tokenised, String expected) throws Exception, ParserConfigurationException, SAXException,
 			IOException {
@@ -166,6 +176,12 @@ public class PreprocessTest {
 	@Test(dataProvider = "timeExpandData")
 	public void testExpandTime(String token, String word) {
 		String actual = module.expandTime(token, false);
+		Assert.assertEquals(actual, word);
+	}
+	
+	@Test(dataProvider = "dateExpandData")
+	public void testExpandDate(String token, String word) throws ParseException {
+		String actual = module.expandDate(token);
 		Assert.assertEquals(actual, word);
 	}
 }
