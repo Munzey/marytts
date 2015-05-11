@@ -31,32 +31,6 @@ public class PreprocessTest {
 		module = new Preprocess();
 	}
 
-	@DataProvider(name = "DocData")
-	private Object[][] numberExpansionDocData() {
-		// @formatter:off
-		return new Object[][] { { "1", "one" }, 
-								{ "2", "two" }, 
-								{ "3", "three" }, 
-								{ "4", "four" },
-								{ "42", "forty-two"},
-								{ "$12", "twelve dollars"},
-								{ "$1", "one dollar"},
-								{ "£100", "one hundred pound sterling"},
-								{ "£1,000", "one thousand pound sterling"},
-								{ "1,920", "one thousand nine hundred twenty"},
-								{ "1920", "nineteen twenty"},
-								{ "$1.28", "one dollar twenty-eight cents"},
-								{ "£1.28", "one pound sterling twenty-eight pence"},
-								{ "€2" , "two euro"},
-								{ "1st", "first"},
-								{ "2nd", "second" },
-								{ "3rd", "third" },
-								{ "4th", "fourth" }, 
-								{ "1-800", "one eight zero zero" },
-								{ "cat-like", "cat like"}};
-		// @formatter:on
-	}
-
 	@DataProvider(name = "NumExpandData")
 	private Object[][] numberExpansionDocDataCardinal() {
 		// @formatter:off
@@ -131,22 +105,6 @@ public class PreprocessTest {
 								{ "mrs", "missus" }, 
 								{ "Mr.", "mister" } };
 		// @formatter:on
-	}
-
-	@Test(dataProvider = "DocData")
-	public void testSpellout(String tokenised, String expected) throws Exception, ParserConfigurationException, SAXException,
-			IOException {
-		Document tokenisedDoc;
-		Document expectedDoc;
-		String tokens = "<maryxml xmlns=\"http://mary.dfki.de/2002/MaryXML\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"0.5\" xml:lang=\"en\"><p><s><t>"
-				+ tokenised + "</t></s></p></maryxml>";
-		tokenisedDoc = DomUtils.parseDocument(tokens);
-		String words = "<maryxml xmlns=\"http://mary.dfki.de/2002/MaryXML\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"0.5\" xml:lang=\"en\"><p><s><mtu orig=\""
-				+ tokenised + "\"><t>" + expected + "</t></mtu></s></p></maryxml>";
-		expectedDoc = DomUtils.parseDocument(words);
-		module.expand(tokenisedDoc);
-		Diff diff = XMLUnit.compareXML(expectedDoc, tokenisedDoc);
-		Assert.assertTrue(diff.identical());
 	}
 
 	@Test(dataProvider = "NumExpandData")
