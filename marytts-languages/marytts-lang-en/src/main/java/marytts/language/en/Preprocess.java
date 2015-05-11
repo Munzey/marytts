@@ -214,29 +214,29 @@ public class Preprocess extends InternalModule {
 			if (MaryDomUtils.tokenText(t).matches(ordinalPattern.pattern())) {
 				String matched = MaryDomUtils.tokenText(t).split("st|nd|rd|th|ST|ND|RD|TH")[0];
 				MaryDomUtils.setTokenText(t, expandOrdinal(Double.parseDouble(matched)));
-				// single a or A character
+			// single a or A character
 			} else if (MaryDomUtils.tokenText(t).matches("[aA]")) {
 				Element checkNextNode = MaryDomUtils.getNextSiblingElement((Element) t);
 				if (checkNextNode == null || MaryDomUtils.tokenText(checkNextNode).matches(myPunctPattern.pattern())
 						|| MaryDomUtils.tokenText(checkNextNode).length() == 1) {
 					MaryDomUtils.setTokenText(t, "_a");
 				}
-				// wordAndNumber
+			// wordAndNumber
 			} else if (MaryDomUtils.tokenText(t).matches(numberWordPattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandWordNumber(MaryDomUtils.tokenText(t)));
-				// date
+			// date
 			} else if (MaryDomUtils.tokenText(t).matches(datePattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandDate(MaryDomUtils.tokenText(t)));
-				// year with bc or ad
+			// year with bc or ad
 			} else if (MaryDomUtils.tokenText(t).matches(yearPattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandYearBCAD(MaryDomUtils.tokenText(t)));
-				// year as just 4 digits -> this should always be checked BEFORE real number
+			// year as just 4 digits -> this should always be checked BEFORE real number
 			} else if (MaryDomUtils.tokenText(t).matches("\\d{4}") && isYear == true) {
 				MaryDomUtils.setTokenText(t, expandYear(Double.parseDouble(MaryDomUtils.tokenText(t))));
-				// real number
+			// real number
 			} else if (MaryDomUtils.tokenText(t).matches(realNumPattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandRealNumber(MaryDomUtils.tokenText(t)));
-				// contractions
+			// contractions
 			} else if (MaryDomUtils.tokenText(t).matches(contractPattern.pattern())) {
 				// first check lexicon
 				if (MaryRuntimeUtils.checkLexicon("en_US", MaryDomUtils.tokenText(t)).length == 0) {
@@ -252,10 +252,10 @@ public class Preprocess extends InternalModule {
 						MaryDomUtils.setTokenText(t, splitContraction(MaryDomUtils.tokenText(t)));
 					}
 				}
-				// acronym
+			// acronym
 			} else if (MaryDomUtils.tokenText(t).matches(acronymPattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandAcronym(MaryDomUtils.tokenText(t)));
-				// abbreviation
+			// abbreviation
 			} else if ((MaryDomUtils.tokenText(t).matches(abbrevPattern.pattern()) || this.abbrevMap.containsKey(MaryDomUtils
 					.tokenText(t).toLowerCase())) && !isURL) {
 				Element testAbbNode = MaryDomUtils.getNextSiblingElement((Element) t);
@@ -264,7 +264,7 @@ public class Preprocess extends InternalModule {
 					nextTokenIsCapital = true;
 				}
 				MaryDomUtils.setTokenText(t, expandAbbreviation(MaryDomUtils.tokenText(t), nextTokenIsCapital));
-				// time
+			// time
 			} else if (MaryDomUtils.tokenText(t).matches(timePattern.pattern())) {
 				Element testTimeNode = MaryDomUtils.getNextSiblingElement((Element) t);
 				boolean nextTokenIsTime = false;
@@ -272,16 +272,16 @@ public class Preprocess extends InternalModule {
 					nextTokenIsTime = true;
 				}
 				MaryDomUtils.setTokenText(t, expandTime(MaryDomUtils.tokenText(t), nextTokenIsTime));
-				// duration
+			// duration
 			} else if (MaryDomUtils.tokenText(t).matches(durationPattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandDuration(MaryDomUtils.tokenText(t)));
-				// currency
+			// currency
 			} else if (MaryDomUtils.tokenText(t).matches(moneyPattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandMoney(MaryDomUtils.tokenText(t)));
-				// hashtags
+			// hashtags
 			} else if (MaryDomUtils.tokenText(t).matches(hashtagPattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandHashtag(MaryDomUtils.tokenText(t)));
-				// URLs
+			// URLs
 			} else if (MaryDomUtils.tokenText(t).matches(URLPattern.pattern())) {
 				// matching group 2 contains the chunk we want
 				Matcher urlMatcher = URLPattern.matcher(MaryDomUtils.tokenText(t));
@@ -289,21 +289,21 @@ public class Preprocess extends InternalModule {
 				webEmailTemp = MaryDomUtils.tokenText(t);
 				isURL = true;
 				MaryDomUtils.setTokenText(t, expandURL(urlMatcher.group(2)));
-				// dot . for web and email addresses
+			// dot . for web and email addresses
 			} else if (MaryDomUtils.tokenText(t).equals(".") && isURL) {
 				MaryDomUtils.setTokenText(t, "dot");
 				webEmailTemp = webEmailTemp.replaceFirst("\\.", "dot");
 				if (!webEmailTemp.contains(".")) {
 					isURL = false;
 				}
-				// symbols
+			// symbols
 			} else if (MaryDomUtils.tokenText(t).matches(symbolsPattern.pattern())
 					|| MaryDomUtils.tokenText(t).matches(JTokPattern.pattern())) {
 				MaryDomUtils.setTokenText(t, symbols.get(MaryDomUtils.tokenText(t)));
-				// number ranges -> before checking for dashes
+			// number ranges -> before checking for dashes
 			} else if (MaryDomUtils.tokenText(t).matches(rangePattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandRange(MaryDomUtils.tokenText(t)));
-				// dashes and underscores
+			// dashes and underscores
 			} else if (MaryDomUtils.tokenText(t).contains("-") || MaryDomUtils.tokenText(t).contains("_")) {
 				String[] tokens = MaryDomUtils.tokenText(t).split("[-_]");
 				int i = 0;
@@ -318,13 +318,13 @@ public class Preprocess extends InternalModule {
 					i++;
 				}
 				MaryDomUtils.setTokenText(t, Arrays.toString(tokens).replaceAll("[,\\]\\[]", ""));
-				// words containing only consonants
+			// words containing only consonants
 			} else if (MaryDomUtils.tokenText(t).matches(consonantPattern.pattern())) {
 				// first check lexicon
 				if (MaryRuntimeUtils.checkLexicon("en_US", MaryDomUtils.tokenText(t)).length == 0) {
 					MaryDomUtils.setTokenText(t, expandConsonants(MaryDomUtils.tokenText(t)));
 				}
-				// a final attempt to split by punctuation
+			// a final attempt to split by punctuation
 			} else if (punctuationPattern.matcher(MaryDomUtils.tokenText(t)).find()) {
 				puncSplit = true;
 				String[] puncTokens = MaryDomUtils.tokenText(t).split("((?<=\\p{Punct})|(?=\\p{Punct}))");
