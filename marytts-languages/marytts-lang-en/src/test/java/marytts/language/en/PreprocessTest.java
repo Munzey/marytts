@@ -68,7 +68,7 @@ public class PreprocessTest {
 								{ "42", "forty-two"} };
 		// @formatter:on
 	}
-	
+
 	@DataProvider(name = "RealNumExpandData")
 	private Object[][] numberExpansionDocDataRealNumbers() {
 		// @formatter:off
@@ -87,7 +87,7 @@ public class PreprocessTest {
 								{ "4", "fourth" } };
 		// @formatter:on
 	}
-	
+
 	@DataProvider(name = "YearExpandData")
 	private Object[][] numberExpansionDocDataYear() {
 		// @formatter:off
@@ -97,7 +97,7 @@ public class PreprocessTest {
 								{ "2015", "twenty fifteen" } };
 		// @formatter:on
 	}
-	
+
 	@DataProvider(name = "wordNumExpandData")
 	private Object[][] expansionDocDataNumWord() {
 		// @formatter:off
@@ -105,7 +105,7 @@ public class PreprocessTest {
 								{ "1hello5", "one hello five" } };
 		// @formatter:on
 	}
-	
+
 	@DataProvider(name = "timeExpandData")
 	private Object[][] expansionDocDataTime() {
 		// @formatter:off
@@ -115,7 +115,7 @@ public class PreprocessTest {
 								{ "23:30", "eleven thirty p m" } };
 		// @formatter:on
 	}
-	
+
 	@DataProvider(name = "dateExpandData")
 	private Object[][] expansionDocDataDate() {
 		// @formatter:off
@@ -123,7 +123,16 @@ public class PreprocessTest {
 								{ "06/22/1992", "June twenty-second nineteen ninety-two" } };
 		// @formatter:on
 	}
-	
+
+	@DataProvider(name = "abbrevExpandData")
+	private Object[][] expansionDocDataAbbrev() {
+		// @formatter:off
+		return new Object[][] { { "dr.", "drive" },
+								{ "mrs", "missus" }, 
+								{ "Mr.", "mister" } };
+		// @formatter:on
+	}
+
 	@Test(dataProvider = "DocData")
 	public void testSpellout(String tokenised, String expected) throws Exception, ParserConfigurationException, SAXException,
 			IOException {
@@ -146,7 +155,7 @@ public class PreprocessTest {
 		String actual = module.expandNumber(x);
 		Assert.assertEquals(actual, word);
 	}
-	
+
 	@Test(dataProvider = "RealNumExpandData")
 	public void testExpandRealNum(String token, String word) {
 		String actual = module.expandRealNumber(token);
@@ -159,29 +168,83 @@ public class PreprocessTest {
 		String actual = module.expandOrdinal(x);
 		Assert.assertEquals(actual, word);
 	}
-	
+
 	@Test(dataProvider = "YearExpandData")
 	public void testExpandYear(String token, String word) {
 		double x = Double.parseDouble(token);
 		String actual = module.expandYear(x);
 		Assert.assertEquals(actual, word);
 	}
-	
+
 	@Test(dataProvider = "wordNumExpandData")
 	public void testExpandNumWord(String token, String word) {
 		String actual = module.expandWordNumber(token);
 		Assert.assertEquals(actual, word);
 	}
-	
+
 	@Test(dataProvider = "timeExpandData")
 	public void testExpandTime(String token, String word) {
 		String actual = module.expandTime(token, false);
 		Assert.assertEquals(actual, word);
 	}
-	
+
 	@Test(dataProvider = "dateExpandData")
 	public void testExpandDate(String token, String word) throws ParseException {
 		String actual = module.expandDate(token);
 		Assert.assertEquals(actual, word);
+	}
+
+	@Test(dataProvider = "abbrevExpandData")
+	public void testExpandAbbrev(String token, String word) throws ParseException {
+		String actual = module.expandAbbreviation(token, false);
+		Assert.assertEquals(actual, word);
+	}
+
+	@Test
+	public void testSplitContraction() {
+		String test = "cat's";
+		String expected = "cat 's";
+		test = module.splitContraction(test);
+		Assert.assertEquals(test, expected);
+	}
+
+	@Test
+	public void testExpandURL() {
+		String test = "hello@gmail.com";
+		String expected = "hello @ gmail . com";
+		test = module.expandURL(test);
+		Assert.assertEquals(test, expected);
+	}
+
+	@Test
+	public void testExpandYearBCAD() {
+		String test = "1920A.D";
+		String expected = "nineteen twenty A D";
+		test = module.expandYearBCAD(test);
+		Assert.assertEquals(test, expected);
+	}
+
+	@Test
+	public void testExpandRange() {
+		String test = "18-25";
+		String expected = "eighteen to twenty-five";
+		test = module.expandRange(test);
+		Assert.assertEquals(test, expected);
+	}
+
+	@Test
+	public void testExpandHashtag() {
+		String test = "#weDidIt";
+		String expected = "hashtag we Did It";
+		test = module.expandHashtag(test);
+		Assert.assertEquals(test, expected);
+	}
+
+	@Test
+	public void testExpandConsonants() {
+		String test = "bbc";
+		String expected = "b b c";
+		test = module.expandConsonants(test);
+		Assert.assertEquals(test, expected);
 	}
 }
