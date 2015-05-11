@@ -34,7 +34,7 @@ class CmuDictConverter {
                     def m = line =~ /^([A-Z]+(\d+)?('S)?)(\([1-3]\))?\s+.*/
                     if (m) {
                         //group2=words with numbers||group3=words ending in 's||group4=words with multiple pronunciations
-                        if (!m.group(2) && !m.group(3) && !m.group(4)) {
+                        if (!m.group(2) && !m.group(4)) {
                             def (lemma, arpaPhones) = line.toLowerCase().trim().split(/\s+/, 2)
                             def sampaPhones = arpaPhones.split().collect {
                                 def (arpa, stress) = it.replaceAll(/(.+?)([0-2]?)$/, '$1 $2').tokenize()
