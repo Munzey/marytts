@@ -75,8 +75,8 @@ public class PreprocessTest {
 	@DataProvider(name = "wordNumExpandData")
 	private Object[][] expansionDocDataNumWord() {
 		// @formatter:off
-		return new Object[][] { { "123abc", "one hundred twenty-three abc" },
-								{ "1hello5", "one hello five" } };
+		return new Object[][] { { "123abc", "one two three  abc" },
+								{ "1hello5", "one  hello five " } };
 		// @formatter:on
 	}
 
