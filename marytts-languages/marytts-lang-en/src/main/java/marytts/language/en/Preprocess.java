@@ -217,8 +217,8 @@ public class Preprocess extends InternalModule {
 				// single a or A character
 			} else if (MaryDomUtils.tokenText(t).matches("[aA]")) {
 				Element checkNextNode = MaryDomUtils.getNextSiblingElement((Element) t);
-				if (checkNextNode == null || MaryDomUtils.tokenText(t).matches(myPunctPattern.pattern())
-						|| MaryDomUtils.tokenText(t).length() == 1) {
+				if (checkNextNode == null || MaryDomUtils.tokenText(checkNextNode).matches(myPunctPattern.pattern())
+						|| MaryDomUtils.tokenText(checkNextNode).length() == 1) {
 					MaryDomUtils.setTokenText(t, "_a");
 				}
 				// wordAndNumber
