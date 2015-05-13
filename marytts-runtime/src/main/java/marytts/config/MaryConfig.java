@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -45,6 +46,7 @@ import marytts.util.io.PropertiesTrimTrailingWhitespace;
  */
 public abstract class MaryConfig {
 	private static final ServiceLoader<MaryConfig> configLoader = ServiceLoader.load(MaryConfig.class);
+	private static final Logger log = Logger.getLogger(MaryConfig.class.getName());
 
 	/**
 	 * This method will try to check that the available configs are consistent and will spot obvious reasons why they might not
@@ -133,11 +135,27 @@ public abstract class MaryConfig {
 		return vcs;
 	}
 
+	/***
+	 * first checks if a language config contains the locale, if not then tries again without the region of the locale and tries
+	 * to match against each of the language configs property "name", if so sets locale to that config's default. finally tries to
+	 * match the locale with each configs name again
+	 * 
+	 * @param locale
+	 * @return
+	 */
 	public static LanguageConfig getLanguageConfig(Locale locale) {
 		for (MaryConfig mc : configLoader) {
 			if (mc.isLanguageConfig()) {
 				LanguageConfig lc = (LanguageConfig) mc;
 				if (lc.getLocales().contains(locale)) {
+					return lc;
+				} else if (lc.getLanguageName().equals(locale.getLanguage())) {
+					log.warning("Local " + locale.toLanguageTag() + " could not be found, default locale for "
+							+ locale.getLanguage() + " will be used");
+					return lc;
+				} else if (lc.getLanguageName().equals(locale.toLanguageTag())) {
+					log.warning("Local " + locale.toLanguageTag() + " could not be found, default locale for "
+							+ locale.getLanguage() + " will be used");
 					return lc;
 				}
 			}

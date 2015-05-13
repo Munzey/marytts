@@ -33,10 +33,14 @@ import marytts.util.MaryUtils;
 /**
  * @author marc
  *
+ *         if a default Locale is not set for a language and a language config contains only one locale, then that locale is set
+ *         as the defaultLocale, else the default locale is set to the language name
+ *
  */
 public class LanguageConfig extends MaryConfig {
 
 	private Set<Locale> locales = new HashSet<Locale>();
+	private Locale defaultLocale;
 
 	public LanguageConfig(InputStream propertyStream) throws MaryConfigurationException {
 		super(propertyStream);
@@ -51,6 +55,14 @@ public class LanguageConfig extends MaryConfig {
 		if (locales.isEmpty()) {
 			throw new MaryConfigurationException("property stream does not define any locale");
 		}
+		String defLocale = getProperties().getProperty("locale.default");
+		if (defLocale != null) {
+			defaultLocale = MaryUtils.string2locale(defLocale);
+		} else if (localeProp.split("\\s+").length == 1) {
+			defaultLocale = MaryUtils.string2locale(localeProp);
+		} else {
+			defaultLocale = MaryUtils.string2locale(getProperties().getProperty("name"));
+		}
 	}
 
 	@Override
@@ -62,7 +74,18 @@ public class LanguageConfig extends MaryConfig {
 		return locales;
 	}
 
+	public String getLanguageName() {
+		return getProperties().getProperty("name");
+	}
+
+	public Locale getDefaultLocale() {
+		return defaultLocale;
+	}
+
 	protected AllophoneSet getAllophoneSetFor(Locale locale) throws MaryConfigurationException {
+		if (!locales.contains(locale)) {
+			locale = getDefaultLocale();
+		}
 		return MaryRuntimeUtils.needAllophoneSet(locale.toString() + ".allophoneset");
 	}
 }

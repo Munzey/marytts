@@ -55,4 +55,11 @@ public class GermanConfigTest {
 		LanguageConfig e = new GermanConfig();
 		assertTrue(e.getLocales().contains(Locale.GERMAN));
 	}
+	
+	@Test
+	public void hasAllophoneSet() throws MaryConfigurationException {
+		LanguageConfig e = new GermanConfig();
+		assertNotNull(e.getAllophoneSet(Locale.GERMAN));
+		assertNotNull(e.getAllophoneSet(new Locale("de", "CH")));
+	}
 }

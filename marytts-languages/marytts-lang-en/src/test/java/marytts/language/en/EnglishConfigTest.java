@@ -78,6 +78,7 @@ public class EnglishConfigTest {
 		LanguageConfig e = new EnglishConfig();
 		assertNotNull(e.getAllophoneSet(Locale.US));
 		assertNotNull(e.getAllophoneSet(Locale.UK));
+		assertNotNull(e.getAllophoneSet(new Locale("en", "NZ")));
 	}
 
 }
