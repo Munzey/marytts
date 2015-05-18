@@ -6,7 +6,9 @@ package marytts.tools.analysis;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.Locale;
 
+import marytts.config.MaryConfig;
 import marytts.exceptions.MaryConfigurationException;
 import marytts.modules.phonemiser.AllophoneSet;
 import marytts.signalproc.analysis.Labels;
@@ -22,8 +24,7 @@ import org.w3c.dom.Document;
 public class CopySynthesisTest {
 
 	private AllophoneSet getAllophoneSet() throws MaryConfigurationException {
-		return AllophoneSet.getAllophoneSet(getClass()
-				.getResourceAsStream("/marytts/language/en_GB/lexicon/allophones.en_GB.xml"), "dummy");
+		return MaryConfig.getAllophoneSet(Locale.UK);
 	}
 
 	private Labels getReferenceLabels() throws IOException {
