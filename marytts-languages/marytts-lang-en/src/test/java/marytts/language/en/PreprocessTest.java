@@ -3,6 +3,11 @@
  */
 package marytts.language.en;
 
+import marytts.LocalMaryInterface;
+import marytts.MaryInterface;
+import marytts.datatypes.MaryDataType;
+import marytts.exceptions.MaryConfigurationException;
+import marytts.exceptions.SynthesisException;
 import marytts.language.en.Preprocess;
 import marytts.util.dom.DomUtils;
 
@@ -25,10 +30,12 @@ import javax.xml.parsers.ParserConfigurationException;
 public class PreprocessTest {
 
 	private static Preprocess module;
+	private static MaryInterface mary;
 
 	@BeforeSuite
-	public static void setUpBeforeClass() {
+	public static void setUpBeforeClass() throws MaryConfigurationException {
 		module = new Preprocess();
+		mary = new LocalMaryInterface();
 	}
 
 	@DataProvider(name = "NumExpandData")
@@ -105,6 +112,18 @@ public class PreprocessTest {
 								{ "mrs", "missus" }, 
 								{ "Mr.", "mister" } };
 		// @formatter:on
+	}
+	
+	@Test
+	public void testOneWord() throws SynthesisException, ParserConfigurationException, SAXException, IOException, ParseException, MaryConfigurationException {
+		String lemma = "can't";
+		mary.setOutputType(MaryDataType.WORDS.name());
+		Document doc = mary.generateXML(lemma);
+		String words = "<maryxml xmlns=\"http://mary.dfki.de/2002/MaryXML\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"0.5\"><p><s><t>" + lemma + "</t></s></p></maryxml>";
+		Document expectedDoc = DomUtils.parseDocument(words);
+		module.expand(expectedDoc);
+		Diff diff = XMLUnit.compareXML(expectedDoc, doc);
+		Assert.assertTrue(diff.identical());
 	}
 
 	@Test(dataProvider = "NumExpandData")

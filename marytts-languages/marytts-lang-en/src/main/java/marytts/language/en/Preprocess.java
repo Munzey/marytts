@@ -64,6 +64,10 @@ import com.google.common.collect.Lists;
  *         - should also as a last processing attempt, split by punctuation,symbols,etc. and attempt to process these tokens separately
  *         - durations hours:minutes:seconds(:milliseconds)
  *         
+ *         Does not handle yet:
+ *         - punctuation -> goes to nothing with an mtu tag 
+ *         - numbers followed by an s
+ *         
  *         May include:
  *         - roman numerals
  */
