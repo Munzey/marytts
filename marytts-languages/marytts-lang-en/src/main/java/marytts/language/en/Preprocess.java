@@ -63,10 +63,10 @@ import com.google.common.collect.Lists;
  *         - single "A/a" character -> if there is no next token or the next token is punctuation or next token string.length == 1
  *         - should also as a last processing attempt, split by punctuation,symbols,etc. and attempt to process these tokens separately
  *         - durations hours:minutes:seconds(:milliseconds)
+ *         - numbers followed by an s
  *         
  *         Does not handle yet:
- *         - punctuation -> goes to nothing with an mtu tag 
- *         - numbers followed by an s
+ *         - punctuation -> <'> should go to nothing with an mtu tag, all other punctuation should remain as a token but add a token element value of <t pos="$PUNCT">
  *         
  *         May include:
  *         - roman numerals
@@ -109,6 +109,7 @@ public class Preprocess extends InternalModule {
 	private static final Pattern hashtagPattern;
 	private static final Pattern ordinalPattern;
 	private static final Pattern currencySymbPattern;
+	private static final Pattern numberSPattern;
 
 	// Regex initialization
 	static {
@@ -130,6 +131,7 @@ public class Preprocess extends InternalModule {
 		rangePattern = Pattern.compile("([0-9]+)-([0-9]+)");
 		consonantPattern = Pattern.compile("[b-df-hj-np-tv-z]+", Pattern.CASE_INSENSITIVE);
 		punctuationPattern = Pattern.compile("\\p{Punct}");
+		numberSPattern = Pattern.compile("([0-9]+)([sS])");
 		myPunctPattern = Pattern.compile(",\\.:;?'\"");
 		hashtagPattern = Pattern.compile("(#)(\\w+)");
 		URLPattern = Pattern
@@ -253,6 +255,9 @@ public class Preprocess extends InternalModule {
 			// date
 			} else if (MaryDomUtils.tokenText(t).matches(datePattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandDate(MaryDomUtils.tokenText(t)));
+			// number followed by s
+			} else if (MaryDomUtils.tokenText(t).matches(numberSPattern.pattern())) {
+				MaryDomUtils.setTokenText(t, expandNumberS(MaryDomUtils.tokenText(t)));
 			// year with bc or ad
 			} else if (MaryDomUtils.tokenText(t).matches("(?i)" + yearPattern.pattern())) {
 				MaryDomUtils.setTokenText(t, expandYearBCAD(MaryDomUtils.tokenText(t)));
@@ -509,6 +514,27 @@ public class Preprocess extends InternalModule {
 		rangeMatcher.find();
 		return expandNumber(Double.parseDouble(rangeMatcher.group(1))) + " to "
 				+ expandNumber(Double.parseDouble(rangeMatcher.group(2)));
+	}
+	
+	/***
+	 * expands a digit followed by an s. e.g. 7s and 8s and the 60s
+	 * @param numberS
+	 * @return
+	 */
+	protected String expandNumberS(String numberS) {
+		Matcher numberSMatcher = numberSPattern.matcher(numberS);
+		numberSMatcher.find();
+		String number = expandNumber(Double.parseDouble(numberSMatcher.group(1)));
+		if (number.endsWith("x")) {
+			number += "es";
+		}
+		else if (number.endsWith("y")) {
+			number = number.replace("y", "ies");
+		}
+		else {
+			number += "s";
+		}
+		return number;
 	}
 
 	protected String splitContraction(String contraction) {
