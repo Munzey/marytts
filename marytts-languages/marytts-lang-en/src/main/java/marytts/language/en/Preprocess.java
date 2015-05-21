@@ -64,9 +64,7 @@ import com.google.common.collect.Lists;
  *         - should also as a last processing attempt, split by punctuation,symbols,etc. and attempt to process these tokens separately
  *         - durations hours:minutes:seconds(:milliseconds)
  *         - numbers followed by an s
- *         
- *         Does not handle yet:
- *         - punctuation -> <'> should go to nothing with an mtu tag, all other punctuation should remain as a token but add a token element value of <t pos="$PUNCT">
+ *         - punctuation -> add ph attribute to tag to prevent phonemisation
  *         
  *         May include:
  *         - roman numerals
@@ -183,6 +181,13 @@ public class Preprocess extends InternalModule {
 		return result;
 	}
 
+	/***
+	 * processes a document in mary xml format, from Tokens to Words which can be phonemised.
+	 * @param doc
+	 * @throws ParseException
+	 * @throws IOException
+	 * @throws MaryConfigurationException
+	 */
 	protected void expand(Document doc) throws ParseException, IOException, MaryConfigurationException {
 		String whichCurrency = "";
 		boolean URLFirst = false;
@@ -366,6 +371,9 @@ public class Preprocess extends InternalModule {
 				puncSplit = true;
 				String[] puncTokens = MaryDomUtils.tokenText(t).split("((?<=\\p{Punct})|(?=\\p{Punct}))");
 				MaryDomUtils.setTokenText(t, Arrays.toString(puncTokens).replaceAll("[,\\]\\[]", ""));
+			// set all punctuation tokens' (and symbols not wordified) pos attribute to anything non-alphabetic in order to stop phonemisation
+			} else if (MaryDomUtils.tokenText(t).matches(punctuationPattern.pattern())) {
+				t.setAttribute("pos", ".");
 			}
 			// if token isn't ignored but there is no handling rule don't add MTU
 			if (!origText.equals(MaryDomUtils.tokenText(t))) {
@@ -378,7 +386,7 @@ public class Preprocess extends InternalModule {
 					t = MaryDomUtils.getNextSiblingElement((Element) t);
 					// if tokens are an expanded contraction
 					if (splitContraction && newTokens.length == 2) {
-						if (newTokens[0].substring(newTokens[0].length() - 1).matches("[cfkpt]")) {
+						if (newTokens[0].substring(newTokens[0].length() - 1).matches("[cfkpt]") && contractions.get(newTokens[i]).length > 1) {
 							t.setAttribute("ph", contractions.get(newTokens[i])[1]);
 						} else {
 							t.setAttribute("ph", contractions.get(newTokens[i])[0]);

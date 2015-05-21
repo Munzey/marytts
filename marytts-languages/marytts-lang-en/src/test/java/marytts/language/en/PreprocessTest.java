@@ -116,7 +116,7 @@ public class PreprocessTest {
 	
 	@Test
 	public void testOneWord() throws SynthesisException, ParserConfigurationException, SAXException, IOException, ParseException, MaryConfigurationException {
-		String lemma = "'s";
+		String lemma = "7";
 		mary.setOutputType(MaryDataType.WORDS.name());
 		Document doc = mary.generateXML(lemma);
 		String words = "<maryxml xmlns=\"http://mary.dfki.de/2002/MaryXML\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"0.5\"><p><s><t>" + lemma + "</t></s></p></maryxml>";
