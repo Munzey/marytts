@@ -49,12 +49,14 @@ import marytts.util.io.FileUtils;
 /**
  * TranscriptionTableModel, an AbstractTableModel, stores transcription data
  * 
+ * lexicon files can either have an optional "functional" OR pos tag, NOT both
  * @author sathish pammi
+ * @author tristan
  *
  */
 public class TranscriptionTableModel extends AbstractTableModel {
 
-	private String[] columnNames = { "No.", "Word", "Transcription", "Functional" };
+	private String[] columnNames = { "No.", "Word", "Transcription", "Functional", "POS" };
 	private Object[][] data;
 	private Object[][] lastSavedData; // Data at the time of loading
 	private boolean[] hasManualVerification;
@@ -63,7 +65,7 @@ public class TranscriptionTableModel extends AbstractTableModel {
 
 	public TranscriptionTableModel() {
 
-		this.data = new Object[20][4];
+		this.data = new Object[20][5];
 		this.hasManualVerification = new boolean[20];
 		this.hasCorrectSyntax = new boolean[20];
 		for (int i = 0; i < 20; i++) {
@@ -71,6 +73,7 @@ public class TranscriptionTableModel extends AbstractTableModel {
 			data[i][1] = "";
 			data[i][2] = "";
 			data[i][3] = Boolean.FALSE;
+			data[i][4] = "";
 			setAsManualVerify(i, false);
 			setAsCorrectSyntax(i, true);
 		}
@@ -85,7 +88,7 @@ public class TranscriptionTableModel extends AbstractTableModel {
 
 		String fileData = FileUtils.getFileAsString(new File(fileName), "UTF-8");
 		String[] words = fileData.split("\n");
-		this.data = new Object[words.length][4];
+		this.data = new Object[words.length][5];
 		this.hasManualVerification = new boolean[words.length];
 		this.hasCorrectSyntax = new boolean[words.length];
 		for (int i = 0; i < words.length; i++) {
@@ -93,6 +96,7 @@ public class TranscriptionTableModel extends AbstractTableModel {
 			data[i][1] = words[i];
 			data[i][2] = "";
 			data[i][3] = Boolean.FALSE;
+			data[i][4] = "";
 			setAsManualVerify(i, false);
 			setAsCorrectSyntax(i, true);
 		}
@@ -144,6 +148,7 @@ public class TranscriptionTableModel extends AbstractTableModel {
 			String word = (String) data[i][1];
 			String trans = (String) data[i][2];
 			boolean isFunctional = (Boolean) data[i][3];
+			String pos = (String) data[i][4];
 			StringBuilder line = new StringBuilder();
 			line.append(word);
 			if (!trans.equals("") && this.hasManualVerification[i] && this.hasCorrectSyntax[i]) {
@@ -151,6 +156,9 @@ public class TranscriptionTableModel extends AbstractTableModel {
 			}
 			if (isFunctional) {
 				line.append(separatorChar).append("functional");
+			}
+			if (!pos.equals("")) {
+				line.append(separatorChar).append(pos);
 			}
 			out.println(line);
 		}
@@ -191,9 +199,9 @@ public class TranscriptionTableModel extends AbstractTableModel {
 			Object[][] oldData = this.data;
 			boolean[] oldHasManualVerification = this.hasManualVerification;
 			boolean[] oldHasCorrectSyntax = this.hasCorrectSyntax;
-			this.data = new Object[oldData.length + lines.size()][4];
+			this.data = new Object[oldData.length + lines.size()][5];
 			for (int i = 0; i < oldData.length; i++) {
-				System.arraycopy(oldData[i], 0, this.data[i], 0, 4);
+				System.arraycopy(oldData[i], 0, this.data[i], 0, 5);
 				currentWords.add((String) oldData[i][1]);
 			}
 			this.hasManualVerification = new boolean[this.data.length];
@@ -202,7 +210,7 @@ public class TranscriptionTableModel extends AbstractTableModel {
 			System.arraycopy(oldHasCorrectSyntax, 0, this.hasCorrectSyntax, 0, oldData.length);
 			offset = oldData.length;
 		} else {
-			this.data = new Object[lines.size()][4];
+			this.data = new Object[lines.size()][5];
 			this.hasManualVerification = new boolean[data.length];
 			this.hasCorrectSyntax = new boolean[data.length];
 			offset = 0;
@@ -219,7 +227,7 @@ public class TranscriptionTableModel extends AbstractTableModel {
 			separatorRE = "\\s+";
 		}
 		for (int i = 0; i < lines.size(); i++) {
-			String[] words = lines.get(i).split(separatorRE);
+			String[] words = lines.get(i).trim().split(separatorRE);
 			String word = words[0].trim();
 			if (currentWords.contains(word))
 				continue; // do not add new words already contained in old list
@@ -245,6 +253,10 @@ public class TranscriptionTableModel extends AbstractTableModel {
 					data[pos][2] = "";
 					setAsManualVerify(pos, false);
 				}
+			}
+			// if the line does not end with "functional" but we do have three entries then presume that's POS
+			if (words.length == 3) {
+				data[pos][4] = words[2].trim();
 			}
 			pos++;
 		}
@@ -290,6 +302,7 @@ public class TranscriptionTableModel extends AbstractTableModel {
 			data[i][1] = (String) it.next(); // wordList.get(i);
 			data[i][2] = "";
 			data[i][3] = Boolean.FALSE;
+			data[i][4] = "";
 			setAsManualVerify(i, false);
 			setAsCorrectSyntax(i, true);
 		}
@@ -340,6 +353,10 @@ public class TranscriptionTableModel extends AbstractTableModel {
 				line = (String) data[i][1];
 				String grapheme = phoneSet.splitAllophoneString((String) data[i][2]);
 				line += "|" + grapheme;
+				String POS = (String) data[i][4];
+				if (!POS.equals("")) {
+					line += "|" + POS;
+				}
 				out.println(line);
 			}
 		}
@@ -388,6 +405,16 @@ public class TranscriptionTableModel extends AbstractTableModel {
 		int countData = 0;
 		for (int i = 0; i < data.length; i++) {
 			if (!((String) data[i][2]).equals("") && this.hasManualVerification[i] && this.hasCorrectSyntax[i]) {
+				countData++;
+			}
+		}
+		return countData != 0;
+	}
+	
+	public boolean hasPosData() {
+		int countData = 0;
+		for (int i = 0; i < data.length; i++) {
+			if (!((String) data[i][4]).equals("")) {
 				countData++;
 			}
 		}
