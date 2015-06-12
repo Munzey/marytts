@@ -235,12 +235,16 @@ public class JPhonemiser extends InternalModule {
 		String phones = lts.predictPronunciation(text);
 		if (phones.length() > 0) {
 			result = lts.syllabify(phones);
+		
+			if (result != null) {
+				g2pMethod.append("rules");
+				return result;
+			}
 		}
-		if (result != null) {
-			g2pMethod.append("rules");
-			return result;
+		else {
+			logger.warn("no pronunciation for token <" + text + "> with POS <" + pos + ">  ph attribute will be set to empty string" );
+			return "";
 		}
-
 		return null;
 	}
 
